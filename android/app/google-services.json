@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "648486503133",
+    "project_id": "todo-duel-app",
+    "storage_bucket": "todo-duel-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648486503133:android:32033752e1a681177c1134",
+        "android_client_info": {
+          "package_name": "com.example.todothings"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "648486503133-4f5luffi3035vbuq7fdt1dvcjaeauvae.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCl4SNyw5Sh-ndptjfTrSvnZlzb4bYGkBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "648486503133-4f5luffi3035vbuq7fdt1dvcjaeauvae.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

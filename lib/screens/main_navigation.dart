@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'duel_table.dart';
-import 'history_view.dart';
-import 'update_checker.dart'; // 📌 成功引入你寫好的高質感更新檢查器
+import 'weekly_duel_table.dart';
+import '../widgets/history_view.dart';
+import '../widgets/update_checker.dart'; 
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -10,16 +10,15 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-// 📌 修正點：將原本拆開的 State 合併回正規的命名結構，徹底解決 mixin 報錯
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  
+  // 這裡的 WeeklyDuelTable() 就會成功讀取新版了！
   final List<Widget> _pages = [const WeeklyDuelTable(), const HistoryView()];
 
   @override
   void initState() {
     super.initState();
-    
-    // 📌 讓 App 一進入主畫面，就在背景自動且優雅地向 Firebase 比對版本
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UpdateChecker.checkVersion(context);
     });
@@ -38,7 +37,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF2D3436), // 深色灰，展現內斂質感
+          selectedItemColor: const Color(0xFF2D3436), 
           unselectedItemColor: const Color(0xFFB2BEC3),
           selectedFontSize: 11,
           unselectedFontSize: 11,

@@ -19,10 +19,16 @@ android {
         applicationId = "com.example.todothings"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        
+        // 📌 建議可以把原本的 flutter.minSdkVersion 改成 23，這樣對 Firebase 支援度最完美
+        minSdk = flutter.minSdkVersion 
+        
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // 🎯 核心修正：加入這一行（注意這裡新版語法要用等號 `=`）
+        multiDexEnabled = true
     }
 
     buildTypes {
