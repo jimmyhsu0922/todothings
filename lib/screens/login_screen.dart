@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // 2. 歡迎文字（文青風深可可字體）
                     const Text(
-                      '雙人自律對決',
+                      '雙人每週代辦事項',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,

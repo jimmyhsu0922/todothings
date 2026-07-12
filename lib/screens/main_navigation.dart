@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:todothings/widgets/update_checker.dart';
 import 'weekly_duel_table.dart';
-import '../widgets/history_view.dart';
-import '../widgets/update_checker.dart'; 
+import 'history_view.dart';
+
+
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});

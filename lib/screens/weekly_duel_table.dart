@@ -317,7 +317,18 @@ class _WeeklyDuelTableState extends State<WeeklyDuelTable> {
                 _saveTasks(allTasks);
               },
               onTextTap: () => _showTaskDetailDialog(taskText, taskDetail),
-              onProgress: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TaskTrackerScreen(taskName: taskText))),
+              // 🟢 完美的雲端同步寫法：把資料庫指標與任務索引一起打包傳過去
+              onProgress: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TaskTrackerScreen(
+                    taskName: taskText,
+                    docRef: _weekDocRef, // 傳入目前的 Firestore 文件參考點
+                    taskIndex: index,    // 傳入這是第幾個任務
+                    isLeft: isLeft,      // 傳入是心柔(true)還是靖祐(false)
+                  ),
+                ),
+              ),
               onEdit: () => _showEditTaskDialog(index, allTasks, isLeft),
               onDelete: () {
                 allTasks.removeAt(index);

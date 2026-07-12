@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UpdateChecker {
-  // 📌 當前這台手機安裝的本地版本號（每次你改了介面、重新打包 APK 時，記得手動在這裡把號碼改大）
+  // 📌 當前這台手機安裝的本地版本號
+  // 每次你改了介面、重新打包 APK 時，記得手動在這裡把號碼改大（例如 "2.0.1"）
   static const String currentLocalVersion = "2.0.0";
 
   static Future<void> checkVersion(BuildContext context) async {
@@ -14,19 +15,22 @@ class UpdateChecker {
           .doc('version_control')
           .get();
 
-      if (!snapshot.exists) return;
+      if (!snapshot.exists) {
+        debugPrint("【更新檢查】Firebase 中找不到 system/version_control 設定文件");
+        return;
+      }
 
       final data = snapshot.data() as Map<String, dynamic>;
       String latestVersion = data['latestVersion'] ?? currentLocalVersion;
       String downloadUrl = data['downloadUrl'] ?? "";
 
-      // 比對版本號。如果不一致，就觸發高級感彈窗
+      // 比對版本號。如果不一致且網址不為空，就觸發高級感彈窗
       if (latestVersion != currentLocalVersion && downloadUrl.isNotEmpty) {
         if (!context.mounted) return;
         _showUpdateDialog(context, latestVersion, downloadUrl);
       }
     } catch (e) {
-      debugPrint("檢查更新時發生錯誤: $e");
+      debugPrint("【更新檢查】檢查更新時發生錯誤: $e");
     }
   }
 
@@ -43,7 +47,11 @@ class UpdateChecker {
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 36, offset: const Offset(0, 12))
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08), 
+                  blurRadius: 36, 
+                  offset: const Offset(0, 12)
+                )
               ],
             ),
             clipBehavior: Clip.antiAlias,
@@ -58,8 +66,11 @@ class UpdateChecker {
                   child: const Row(
                     children: [
                       Icon(Icons.system_update_alt_rounded, color: Color(0xFF2D3436), size: 20),
-                      const SizedBox(width: 12),
-                      Text("NEW VERSION AVAILABLE", style: TextStyle(fontSize: 14, letterSpacing: 1.5, fontWeight: FontWeight.bold, color: Color(0xFF2D3436))),
+                      SizedBox(width: 12),
+                      Text(
+                        "NEW VERSION AVAILABLE", 
+                        style: TextStyle(fontSize: 14, letterSpacing: 1.5, fontWeight: FontWeight.bold, color: Color(0xFF2D3436))
+                      ),
                     ],
                   ),
                 ),
@@ -99,9 +110,34 @@ class UpdateChecker {
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
                         onPressed: () async {
-                          final Uri downloadUri = Uri.parse(url);
-                          if (await canLaunchUrl(downloadUri)) {
-                            await launchUrl(downloadUri, mode: LaunchMode.externalApplication);
+                          // 🎯 防呆優化 1：自動自動清除可能不小心打到的前後空白鍵
+                          final String cleanUrl = url.trim();
+                          final Uri downloadUri = Uri.parse(cleanUrl);
+                          
+                          try {
+                            // 🎯 防呆優化 2：檢查網頁是否能開啟
+                            if (await canLaunchUrl(downloadUri)) {
+                              await launchUrl(
+                                downloadUri, 
+                                mode: LaunchMode.externalApplication // 強制喚醒手機獨立瀏覽器（如 Chrome）
+                              );
+                            } else {
+                              debugPrint("【更新提示】canLaunchUrl 回傳 false，嘗試強行呼叫外部瀏覽器開啟。");
+                              
+                              // 🎯 防呆優化 3：有時候 Android 系統會誤判，在此直接進行強行開啟嘗試
+                              await launchUrl(
+                                downloadUri, 
+                                mode: LaunchMode.externalApplication
+                              );
+                            }
+                          } catch (e) {
+                            debugPrint("【更新錯誤】無法跳轉至網址，原因: $e");
+                            
+                            // 畫面上彈出一個簡單的小提示，告訴使用者出錯了，不要讓他們呆等
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('無法開啟網頁，請手動至 GitHub 下載。錯誤: $e')),
+                            );
                           }
                         },
                         child: const Text("UPDATE NOW", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),

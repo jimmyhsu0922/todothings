@@ -28,7 +28,6 @@ class _HistoryViewState extends State<HistoryView> {
                 children: [
                   Text("MONTHLY ARCHIVE", style: TextStyle(fontSize: 11, letterSpacing: 2, color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  // 📌 這裡也同步幫你改成了 FontWeight.w700 質感粗體！
                   Text("$selectedYear 年 $selectedMonth 月", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF2D3436))),
                   const SizedBox(height: 20),
                   Row(children: [
@@ -75,6 +74,10 @@ class _HistoryViewState extends State<HistoryView> {
         List<dynamic> tasks = data['tasks'] ?? [];
         if (tasks.isEmpty) return const SizedBox.shrink();
 
+        // 🎯 方案二核心：各自過濾並提取真正有內容的任務，移除空白佔位
+        final validL = tasks.where((t) => (t['taskL'] ?? "").toString().trim().isNotEmpty).toList();
+        final validR = tasks.where((t) => (t['taskR'] ?? "").toString().trim().isNotEmpty).toList();
+
         return Container(
           margin: const EdgeInsets.only(bottom: 24),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFEFEFEF))),
@@ -84,16 +87,97 @@ class _HistoryViewState extends State<HistoryView> {
               width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), color: const Color(0xFFFBFBFB),
               child: Text("WEEK 0$week", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1, color: Color(0xFF2D3436))),
             ),
+
+            // 🎯 獨立雙欄排版區塊
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(children: [
-                // 📌 名字標頭字體放大至 14
-                Expanded(child: Text(userL, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)))),
-                const SizedBox(width: 68), // 配合方框放大的間距
-                Expanded(child: Text(userR, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)))),
-              ]),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              child: IntrinsicHeight( // 確保中間的分隔線能完美伸展到與最高的那一欄同高
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🌸 左半邊欄位：心柔的獨立歷史挑戰
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Center(child: Text(userL, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)))),
+                          const SizedBox(height: 12),
+                          if (validL.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Text("本週無挑戰", style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
+                              ),
+                            )
+                          else
+                            ...validL.map((t) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      t['taskL'], 
+                                      textAlign: TextAlign.end, 
+                                      style: TextStyle(fontSize: 14, color: t['statusL'] == 1 ? Colors.grey.shade300 : const Color(0xFF636E72)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _buildStaticStatusBox(t['statusL']),
+                                ],
+                              ),
+                            )),
+                        ],
+                      ),
+                    ),
+
+                    // ｜ 中間優雅的分隔線
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      width: 1,
+                      color: const Color(0xFFF1F2F6),
+                    ),
+
+                    // ⚡ 右半邊欄位：靖祐的獨立歷史挑戰
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(child: Text(userR, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)))),
+                          const SizedBox(height: 12),
+                          if (validR.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Text("本週無挑戰", style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
+                              ),
+                            )
+                          else
+                            ...validR.map((t) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  _buildStaticStatusBox(t['statusR']),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      t['taskR'], 
+                                      textAlign: TextAlign.start, 
+                                      style: TextStyle(fontSize: 14, color: t['statusR'] == 1 ? Colors.grey.shade300 : const Color(0xFF636E72)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            ...tasks.map((t) => _buildDuelRow(t)),
+
             Container(
               width: double.infinity, padding: const EdgeInsets.all(16), color: const Color(0xFFFBFBFB),
               child: Text("Reward: ${data['rewardText'] ?? 'N/A'}", textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
@@ -104,32 +188,10 @@ class _HistoryViewState extends State<HistoryView> {
     );
   }
 
-  Widget _buildDuelRow(Map<String, dynamic> t) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), // 稍微拉大上下行距
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF9F9F9)))),
-      child: Row(children: [
-        // 📌 左任務改為置中 (TextAlign.center) 且放大至 14
-        Expanded(child: Text(t['taskL'], textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: t['statusL'] == 1 ? Colors.grey.shade300 : const Color(0xFF636E72)))),
-        const SizedBox(width: 10),
-        
-        // 📌 靜態歷史方框放大
-        _buildStaticStatusBox(t['statusL']), 
-        const SizedBox(width: 8),
-        _buildStaticStatusBox(t['statusR']),
-        
-        const SizedBox(width: 10),
-        // 📌 右任務改為置中 (TextAlign.center) 且放大至 14
-        Expanded(child: Text(t['taskR'], textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: t['statusR'] == 1 ? Colors.grey.shade300 : const Color(0xFF636E72)))),
-      ]),
-    );
-  }
-
   Widget _buildStaticStatusBox(int status) {
     Widget innerWidget = const SizedBox.shrink();
     BoxDecoration decoration;
 
-    // 📌 歷史頁方框放大至 28x28，圓角 8
     if (status == 1) { 
       decoration = BoxDecoration(color: const Color(0xFF2D3436), borderRadius: BorderRadius.circular(8));
       innerWidget = const Icon(Icons.check_rounded, color: Colors.white, size: 16);
