@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 class UpdateChecker {
   // 📌 當前這台手機安裝的本地版本號
   // 每次你改了介面、重新打包 APK 時，記得手動在這裡把號碼改大（例如 "2.0.1"）
-  static const String currentLocalVersion = "2.2.0";
+  static const String currentLocalVersion = "2.2.1";
 
   static Future<void> checkVersion(BuildContext context) async {
     try {

@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_local_notifications: ^17.0.0
+  scrollable_positioned_list: ^0.3.8
   timezone: ^0.9.2
 
   cupertino_icons: ^1.0.8
@@ -28,6 +29,7 @@ dev_dependencies:
 # 💡 以下是正確且唯一的 flutter 配置區塊
 flutter:
   uses-material-design: true
+
 
   # 🎯 這裡縮排剛好 2 個空格
   assets:

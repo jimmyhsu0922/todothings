@@ -20,6 +20,9 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
   bool _isJingYouView = true;
   bool _hasInitialScrolled = false;
 
+  // 暫存目前的經文清單，供切換頁面或視角時重新定位使用
+  List<DevotionalItem> _cachedItems = [];
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +48,7 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
     await _faithDocRef.set({_currentRecordsKey: serializedList}, SetOptions(merge: true));
   }
 
+  // 💡 自動計算並平滑捲動至最接近今天的卡片
   void _scrollToClosestToday(List<DevotionalItem> items) {
     if (items.isEmpty || !_scrollController.hasClients) return;
 
@@ -82,8 +86,7 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
     );
   }
 
-  // 💡 顯示經文目錄清單 Sheet
-// 💡 經文目錄彈窗：在日期旁加入星星標記
+  // 💡 經文目錄彈窗：在日期旁加入星星標記
   void _showScriptureListBottomSheet(List<DevotionalItem> items) {
     showDialog(
       context: context,
@@ -159,7 +162,6 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                                   fontSize: 12,
                                 ),
                               ),
-                              // 💡 若有選擇外框，顯示金黃色星星
                               if (item.hasHighlightedBorder) ...[
                                 const SizedBox(width: 4),
                                 const Icon(
@@ -286,7 +288,9 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                     .toList();
 
                 items.sort((a, b) => a.parsedDate.compareTo(b.parsedDate));
+                _cachedItems = items;
 
+                // 💡 首次載入或切換頁面回來時，自動捲動至最接近今天的經文
                 if (!_hasInitialScrolled && items.isNotEmpty) {
                   _hasInitialScrolled = true;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -350,9 +354,20 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                                 color: Color(0xFF2D3436),
                               ),
                             ),
-                            // 💡 右上角按鈕組（目錄清單 + 新增）
+                            // 💡 右上角按鈕組（回到今天 + 目錄清單 + 新增）
                             Row(
                               children: [
+                                // 💡 新增手動「回到今天」的捷徑按鈕
+                                IconButton(
+                                  onPressed: () => _scrollToClosestToday(items),
+                                  icon: const Icon(Icons.today_rounded, color: Color(0xFF6C5CE7)),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    padding: const EdgeInsets.all(12),
+                                    elevation: 2,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 IconButton(
                                   onPressed: () => _showScriptureListBottomSheet(items),
                                   icon: const Icon(Icons.format_list_bulleted_rounded, color: Color(0xFF6C5CE7)),
@@ -419,12 +434,11 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                                 item: item,
                                 currentList: items,
                               ),
-                              // 💡 補上漏掉的 onColorChanged 參數：更新本地狀態並儲存至 Firestore
                               onColorChanged: (newColorIndex) {
                                 setState(() {
                                   item.selectedColorIndex = newColorIndex;
                                 });
-                                _updateFirestoreRecords(items); // 寫入資料庫
+                                _updateFirestoreRecords(items);
                               },
                             );
                           },
@@ -453,7 +467,7 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
           setState(() {
             _isJingYouView = isTargetJingYou;
             _scrollOffset = 0.0;
-            _hasInitialScrolled = false;
+            _hasInitialScrolled = false; // 重置狀態，切換視角時自動重新尋找最接近今天的經文
           });
           if (_scrollController.hasClients) {
             _scrollController.jumpTo(0.0);

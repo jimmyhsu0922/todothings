@@ -10,6 +10,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // 💡 開啟 Java 脫糖支援 (Desugaring)
+        isCoreLibraryDesugaringEnabled = true
+
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -19,15 +22,12 @@ android {
         applicationId = "com.example.todothings"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        
-        // 📌 建議可以把原本的 flutter.minSdkVersion 改成 23，這樣對 Firebase 支援度最完美
-        minSdk = flutter.minSdkVersion 
-        
+
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // 🎯 核心修正：加入這一行（注意這裡新版語法要用等號 `=`）
         multiDexEnabled = true
     }
 
@@ -48,4 +48,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // 💡 加入 Desugaring 核心函式庫依賴
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
