@@ -93,26 +93,48 @@ class RoadPainter extends CustomPainter {
 }
 
 
-// ==================== 2. 信仰成長經文卡片 (高度增加、寬度維持 280) ====================
-class DevotionalCard extends StatelessWidget {
+// ==================== 2. 信仰成長經文卡片 (點擊切換外框顏色) ====================
+class DevotionalCard extends StatefulWidget {
   final DevotionalItem item;
   final int index;
   final VoidCallback onEditTap;
+  final Function(int newColorIndex) onColorChanged; // 💡 新增：外框改變回呼
 
   const DevotionalCard({
     super.key,
     required this.item,
     required this.index,
     required this.onEditTap,
+    required this.onColorChanged,
   });
 
   @override
+  State<DevotionalCard> createState() => _DevotionalCardState();
+}
+
+class _DevotionalCardState extends State<DevotionalCard> {
+  final List<Color?> _borderColors = [
+    null,                   // 0: 預設無外框
+    const Color(0xFF6C5CE7), // 1: 紫色
+    const Color(0xFFFF7675), // 2: 珊瑚紅
+    const Color(0xFF00B894), // 3: 薄荷綠
+  ];
+
+  void _toggleBorderColor() {
+    final nextIndex = (widget.item.selectedColorIndex + 1) % _borderColors.length;
+    widget.onColorChanged(nextIndex); // 通知父元件更新
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final double topMargin = index % 2 == 0 ? 30 : 100;
+    final double topMargin = widget.index % 2 == 0 ? 30 : 100;
+    final int colorIdx = widget.item.selectedColorIndex;
+    final Color? activeBorderColor = _borderColors[colorIdx < _borderColors.length ? colorIdx : 0];
+    final bool isHighlighted = activeBorderColor != null;
 
     return Container(
       margin: EdgeInsets.only(top: topMargin, right: 32),
-      width: 280, // 💡 寬度維持原本精緻的 280 尺寸
+      width: 280,
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(),
         child: Column(
@@ -120,17 +142,17 @@ class DevotionalCard extends StatelessWidget {
           children: [
             // 點擊日期區域
             GestureDetector(
-              onTap: onEditTap,
+              onTap: widget.onEditTap,
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: item.themeColor,
+                    color: widget.item.themeColor,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: item.themeColor.withOpacity(0.4),
+                        color: widget.item.themeColor.withOpacity(0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       )
@@ -140,7 +162,7 @@ class DevotionalCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "${item.year}/${item.date}",
+                        "${widget.item.year}/${widget.item.date}",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -155,79 +177,84 @@ class DevotionalCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            
-            // 經文與紀錄卡片
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(color: const Color(0xFFF1F2F6)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 表情與小圓點
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(item.icon, color: item.themeColor, size: 22),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: item.themeColor.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  // 💡 經文內容區：高度由 95 大幅調高至 140，經文更舒展，完美不擠壓！
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 140),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Text(
-                        item.scripture,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2D3436),
-                          height: 1.5,
-                        ),
-                      ),
+
+            // 卡片本體
+            GestureDetector(
+              onTap: _toggleBorderColor,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isHighlighted
+                          ? activeBorderColor.withOpacity(0.25)
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: isHighlighted ? 18 : 15,
+                      offset: const Offset(0, 8),
                     ),
+                  ],
+                  border: Border.all(
+                    color: activeBorderColor ?? const Color(0xFFF1F2F6),
+                    width: isHighlighted ? 2.5 : 1.0,
                   ),
-                  
-                  if (item.notes.isNotEmpty) ...[
-                    const Divider(height: 18, color: Color(0xFFF1F2F6)),
-                    // 💡 心得文字區：高度也從 80 加高到 110，記錄的心得能展現更多行
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(widget.item.icon, color: widget.item.themeColor, size: 22),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          width: isHighlighted ? 10 : 6,
+                          height: isHighlighted ? 10 : 6,
+                          decoration: BoxDecoration(
+                            color: activeBorderColor ?? widget.item.themeColor.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 110),
+                      constraints: const BoxConstraints(maxHeight: 140),
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
                         child: Text(
-                          item.notes,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                          widget.item.scripture,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2D3436),
                             height: 1.5,
                           ),
                         ),
                       ),
                     ),
+                    if (widget.item.notes.isNotEmpty) ...[
+                      const Divider(height: 18, color: Color(0xFFF1F2F6)),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 110),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Text(
+                            widget.item.notes,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -236,7 +263,6 @@ class DevotionalCard extends StatelessWidget {
     );
   }
 }
-
 
 // ==================== 3. 彈出新增或修改的對話框（支援年份選擇） ====================
 class DevotionalDialog extends StatefulWidget {

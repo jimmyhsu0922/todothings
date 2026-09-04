@@ -116,6 +116,12 @@ class UpdateChecker {
                           
                           try {
                             // 🎯 防呆優化 2：檢查網頁是否能開啟
+                            // 強制使用外部瀏覽器開啟（避免在 GitHub App 內因權限問題撞牆）
+                            bool launched = await launchUrl(
+                              downloadUri,
+                              mode: LaunchMode.externalApplication,
+                            );
+
                             if (await canLaunchUrl(downloadUri)) {
                               await launchUrl(
                                 downloadUri, 

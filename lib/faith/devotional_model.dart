@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 class DevotionalItem {
-  int year; // 新增年份欄位
-  String date; // 格式如 "07/13"
+  int year;
+  String date;
   String scripture;
   String notes;
   final Color themeColor;
   final IconData icon;
+  int selectedColorIndex; // 💡 新增：紀錄外框顏色 (0:無, 1:紫, 2:紅, 3:綠)
 
   DevotionalItem({
     required this.year,
@@ -15,9 +16,19 @@ class DevotionalItem {
     required this.notes,
     required this.themeColor,
     required this.icon,
+    this.selectedColorIndex = 0, // 預設 0 (無特殊外框)
   });
 
-  // 輔助屬性：轉換成 DateTime 方便排序比較
+  // 💡 判斷是否有開啟外框（用於目錄清單顯示星星）
+  bool get hasHighlightedBorder => selectedColorIndex > 0;
+
+  // 自動擷取第一行經節名稱
+  String get titleVerse {
+    if (scripture.isEmpty) return '無經節紀錄';
+    final lines = scripture.trim().split('\n');
+    return lines.first;
+  }
+
   DateTime get parsedDate {
     try {
       final parts = date.split('/');
@@ -25,12 +36,10 @@ class DevotionalItem {
       final day = int.parse(parts[1]);
       return DateTime(year, month, day);
     } catch (e) {
-      // 解析失敗時的防呆預設值
       return DateTime(year, 1, 1);
     }
   }
 
-  // 將資料轉成能存入 Firestore 的 Map 格式
   Map<String, dynamic> toMap() {
     return {
       'year': year,
@@ -39,13 +48,13 @@ class DevotionalItem {
       'notes': notes,
       'colorValue': themeColor.value,
       'iconCodePoint': icon.codePoint,
+      'selectedColorIndex': selectedColorIndex, // 💡 存入 Firestore
     };
   }
 
-  // 從 Firestore 還原成 Flutter 物件
   factory DevotionalItem.fromMap(Map<String, dynamic> map) {
     return DevotionalItem(
-      year: map['year'] ?? DateTime.now().year, // 若無則預設今年
+      year: map['year'] ?? DateTime.now().year,
       date: map['date'] ?? '',
       scripture: map['scripture'] ?? '',
       notes: map['notes'] ?? '',
@@ -54,6 +63,7 @@ class DevotionalItem {
         map['iconCodePoint'] ?? 0xe5f2,
         fontFamily: 'MaterialIcons',
       ),
+      selectedColorIndex: map['selectedColorIndex'] ?? 0, // 💡 從 Firestore 還原
     );
   }
 }

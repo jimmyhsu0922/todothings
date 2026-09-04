@@ -12,13 +12,13 @@ class FaithGrowthView extends StatefulWidget {
 
 class _FaithGrowthViewState extends State<FaithGrowthView> {
   final DocumentReference _faithDocRef =
-      FirebaseFirestore.instance.collection('faith').doc('timeline');
+  FirebaseFirestore.instance.collection('faith').doc('timeline');
 
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0.0;
 
-  // 目前切換的是哪個人的專屬視角 (true = 靖祐, false = 心柔)
   bool _isJingYouView = true;
+  bool _hasInitialScrolled = false;
 
   @override
   void initState() {
@@ -36,14 +36,168 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
     super.dispose();
   }
 
-  // 根據當前選擇的人，決定寫入 Firestore 的欄位名稱
   String get _currentRecordsKey => _isJingYouView ? 'records_jingyou' : 'records_xinrou';
 
   Future<void> _updateFirestoreRecords(List<DevotionalItem> items) async {
     final List<Map<String, dynamic>> serializedList =
-        items.map((item) => item.toMap()).toList();
-    
+    items.map((item) => item.toMap()).toList();
+
     await _faithDocRef.set({_currentRecordsKey: serializedList}, SetOptions(merge: true));
+  }
+
+  void _scrollToClosestToday(List<DevotionalItem> items) {
+    if (items.isEmpty || !_scrollController.hasClients) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    int closestIndex = 0;
+    int minDifferenceInDays = 999999;
+
+    for (int i = 0; i < items.length; i++) {
+      final itemDate = items[i].parsedDate;
+      final difference = itemDate.difference(today).inDays.abs();
+
+      if (difference < minDifferenceInDays) {
+        minDifferenceInDays = difference;
+        closestIndex = i;
+      }
+    }
+
+    _scrollToIndex(closestIndex);
+  }
+
+  // 💡 按指定 Index 自動捲動到該卡片
+  void _scrollToIndex(int index) {
+    if (!_scrollController.hasClients) return;
+    const double stepX = 312.0;
+    final double targetOffset = index * stepX;
+    final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+    final double finalOffset = targetOffset.clamp(0.0, maxScrollExtent);
+
+    _scrollController.animateTo(
+      finalOffset,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // 💡 顯示經文目錄清單 Sheet
+// 💡 經文目錄彈窗：在日期旁加入星星標記
+  void _showScriptureListBottomSheet(List<DevotionalItem> items) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.height * 0.65,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "${_isJingYouView ? '靖祐' : '心柔'}的經文目錄",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D3436),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20, color: Color(0xFFF1F2F6)),
+                Expanded(
+                  child: items.isEmpty
+                      ? const Center(
+                    child: Text("尚無靈修紀錄", style: TextStyle(color: Colors.grey)),
+                  )
+                      : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) =>
+                    const Divider(height: 1, color: Color(0xFFF1F2F6)),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        leading: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.themeColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${item.year}/${item.date}",
+                                style: TextStyle(
+                                  color: item.themeColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              // 💡 若有選擇外框，顯示金黃色星星
+                              if (item.hasHighlightedBorder) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 14,
+                                  color: Color(0xFFFFB142),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        title: Text(
+                          item.titleVerse,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3436),
+                            fontSize: 14,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 12,
+                          color: Colors.grey,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _scrollToIndex(index);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showEntryDialog({
@@ -119,7 +273,7 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
 
               if (snapshot.hasData && snapshot.data!.exists) {
                 final data = snapshot.data!.data() as Map<String, dynamic>;
-                
+
                 List<dynamic> rawRecords = [];
                 if (_isJingYouView) {
                   rawRecords = data['records_jingyou'] ?? data['records'] ?? [];
@@ -132,6 +286,13 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                     .toList();
 
                 items.sort((a, b) => a.parsedDate.compareTo(b.parsedDate));
+
+                if (!_hasInitialScrolled && items.isNotEmpty) {
+                  _hasInitialScrolled = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _scrollToClosestToday(items);
+                  });
+                }
               }
 
               return Column(
@@ -155,7 +316,6 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // 小巧切換鈕
                             Container(
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
@@ -165,8 +325,14 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                               ),
                               child: Row(
                                 children: [
-                                  _buildMiniSwitchButton(label: "靖", isTargetJingYou: true),
-                                  _buildMiniSwitchButton(label: "柔", isTargetJingYou: false),
+                                  _buildMiniSwitchButton(
+                                    label: "靖",
+                                    isTargetJingYou: true,
+                                  ),
+                                  _buildMiniSwitchButton(
+                                    label: "柔",
+                                    isTargetJingYou: false,
+                                  ),
                                 ],
                               ),
                             ),
@@ -184,18 +350,33 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                                 color: Color(0xFF2D3436),
                               ),
                             ),
-                            IconButton(
-                              onPressed: () => _showEntryDialog(
-                                isEditing: false,
-                                currentList: items,
-                              ),
-                              icon: const Icon(Icons.add_rounded, color: Colors.white),
-                              style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFF6C5CE7),
-                                padding: const EdgeInsets.all(12),
-                                elevation: 4,
-                                shadowColor: const Color(0xFF6C5CE7).withOpacity(0.4),
-                              ),
+                            // 💡 右上角按鈕組（目錄清單 + 新增）
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () => _showScriptureListBottomSheet(items),
+                                  icon: const Icon(Icons.format_list_bulleted_rounded, color: Color(0xFF6C5CE7)),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    padding: const EdgeInsets.all(12),
+                                    elevation: 2,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () => _showEntryDialog(
+                                    isEditing: false,
+                                    currentList: items,
+                                  ),
+                                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: const Color(0xFF6C5CE7),
+                                    padding: const EdgeInsets.all(12),
+                                    elevation: 4,
+                                    shadowColor: const Color(0xFF6C5CE7).withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
                             )
                           ],
                         ),
@@ -207,44 +388,49 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
                   Expanded(
                     child: items.isEmpty
                         ? Center(
-                            child: Text(
-                              "點選右上角 + 新增${_isJingYouView ? '靖祐' : '心柔'}的第一筆靈修紀錄吧！🌟",
-                              style: const TextStyle(color: Colors.black54, fontSize: 14),
-                            ),
-                          )
+                      child: Text(
+                        "點選右上角 + 新增${_isJingYouView ? '靖祐' : '心柔'}的第一筆靈修紀錄吧！🌟",
+                        style: const TextStyle(color: Colors.black54, fontSize: 14),
+                      ),
+                    )
                         : Stack(
-                            children: [
-                              // 💡 拿掉 key: UniqueKey() 避免重複銷毀與重置線條
-                              TimelineRoadLayer(
-                                itemCount: items.length,
-                                scrollOffset: _scrollOffset,
-                              ),
-                              // 💡 拿掉 key: UniqueKey() 恢復流暢無阻的左右滾動！
-                              ListView.builder(
-                                controller: _scrollController,
-                                scrollDirection: Axis.horizontal,
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 20,
-                                ),
-                                itemCount: items.length,
-                                itemBuilder: (context, index) {
-                                  final item = items[index];
-                                  return DevotionalCard(
-                                    item: item,
-                                    index: index,
-                                    onEditTap: () => _showEntryDialog(
-                                      isEditing: true,
-                                      index: index,
-                                      item: item,
-                                      currentList: items,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                      children: [
+                        TimelineRoadLayer(
+                          itemCount: items.length,
+                          scrollOffset: _scrollOffset,
+                        ),
+                        ListView.builder(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 20,
                           ),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            return DevotionalCard(
+                              item: item,
+                              index: index,
+                              onEditTap: () => _showEntryDialog(
+                                isEditing: true,
+                                index: index,
+                                item: item,
+                                currentList: items,
+                              ),
+                              // 💡 補上漏掉的 onColorChanged 參數：更新本地狀態並儲存至 Firestore
+                              onColorChanged: (newColorIndex) {
+                                setState(() {
+                                  item.selectedColorIndex = newColorIndex;
+                                });
+                                _updateFirestoreRecords(items); // 寫入資料庫
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
@@ -255,17 +441,20 @@ class _FaithGrowthViewState extends State<FaithGrowthView> {
     );
   }
 
-  Widget _buildMiniSwitchButton({required String label, required bool isTargetJingYou}) {
+  Widget _buildMiniSwitchButton({
+    required String label,
+    required bool isTargetJingYou,
+  }) {
     final bool isSelected = _isJingYouView == isTargetJingYou;
-    
+
     return GestureDetector(
       onTap: () {
         if (_isJingYouView != isTargetJingYou) {
           setState(() {
             _isJingYouView = isTargetJingYou;
             _scrollOffset = 0.0;
+            _hasInitialScrolled = false;
           });
-          // 💡 改用控制器直接將滾動位置重置回最左邊，不破壞元件狀態
           if (_scrollController.hasClients) {
             _scrollController.jumpTo(0.0);
           }

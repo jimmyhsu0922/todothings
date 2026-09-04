@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // 1. 引入 Firebase 核心
-import 'services/firebase_options.dart';                  // 2. 引入手動建好的設定檔
-import 'screens/main_navigation.dart';           // 引入主導覽列控制檔案   
+import 'package:firebase_core/firebase_core.dart';
+import 'services/firebase_options.dart';
+import 'screens/main_navigation.dart';
 
-// 🎯 統一使用相對路徑，徹底解決類型打架與重複引入的問題
-import 'screens/weekly_duel_table.dart';                      // 認識登入畫面
-import 'services/auth_service.dart';                      // 認識驗證服務
-import 'screens/login_screen.dart';   
+import 'screens/weekly_duel_table.dart';
+import 'services/auth_service.dart';
+import 'screens/login_screen.dart';
+import 'services/notification_service.dart'; // 💡 引入通知服務
 
 void main() async {
-  // 3. 確保 Flutter 元件都有綁定好（非同步執行必加）
-  WidgetsFlutterBinding.ensureInitialized(); 
-  
-  // 4. 正式啟動雲端連線！
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. 初始化 Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 💡 2. 初始化台灣時間每日定時通知 (09:00 & 22:00)
+  await NotificationService().initNotification();
 
   runApp(const TodoApp());
 }
@@ -32,12 +34,9 @@ class TodoApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      
-      // 🎯 使用 StreamBuilder 自動判斷登入狀態分流
       home: StreamBuilder(
         stream: AuthService().userStream,
         builder: (context, snapshot) {
-          // ✨【全域防呆遮罩】：不論登入、登出還是初次檢查狀態，只要狀態是在 waiting，就啟動頂層鎖定
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               backgroundColor: Color(0xFFF8F9FA),
@@ -53,10 +52,10 @@ class TodoApp extends StatelessWidget {
                     Text(
                       '正在安全連線中...',
                       style: TextStyle(
-                        fontSize: 14, 
-                        color: Color(0xFF2D3436), 
-                        fontWeight: FontWeight.w600, 
-                        letterSpacing: 0.5
+                          fontSize: 14,
+                          color: Color(0xFF2D3436),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5
                       ),
                     ),
                   ],
@@ -64,13 +63,11 @@ class TodoApp extends StatelessWidget {
               ),
             );
           }
-          
-          // ✨【完美分流一】：已登入成功，優雅地引入包含底部導覽列的主畫面
+
           if (snapshot.hasData && snapshot.data != null) {
-            return const MainNavigationScreen(); 
+            return const MainNavigationScreen();
           }
-          
-          // ✨【完美分流二】：未登入狀態，精準攔截並返回登入介面，確保權限安全
+
           return const LoginScreen();
         },
       ),
