@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart'; // 🎯 引入驗證服務
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,68 +11,77 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
-  // 統一處理登入邏輯與全畫面鎖死等待狀態
   Future<void> _handleSignIn(Future<void> Function() signInMethod) async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
 
-    // 🎯 1. 立即跳出「文青風全螢幕鎖死遮罩」，阻斷所有連擊與操作
+    BuildContext? dialogContext;
+
+    // 🎯 1. 彈出 Loading 遮罩，並拿到專屬 context
     showDialog(
       context: context,
-      barrierDismissible: false, // 🔥 關鍵：點擊外面絕對不會關閉
-      builder: (context) => PopScope(
-        canPop: false, // 🔥 關鍵：攔截並鎖死手機實體返回鍵
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF8A8A).withOpacity(0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                )
-              ],
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8A8A)), // 甜蜜粉櫻色轉圈圈
-                    strokeWidth: 3,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx; // 綁定 Dialog 自身的 Context
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF8A8A).withOpacity(0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF8A8A)),
+                      strokeWidth: 3,
+                    ),
                   ),
-                ),
-                SizedBox(height: 20),
-                Text(
-                  '正在載入每週進度...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF4A3E3D),
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.none,
-                    fontFamily: 'sans-serif',
+                  SizedBox(height: 20),
+                  Text(
+                    '正在安全連線中...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF4A3E3D),
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.none,
+                      fontFamily: 'sans-serif',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     try {
       await signInMethod();
-      // 🎯【完美修正】登入成功後，在頁面被 StreamBuilder 自動切換前，必須先把頂層 Dialog pop 掉，避免永久殘留卡死
-      if (mounted) {
-        Navigator.pop(context);
+      // 💡 登入成功：StreamBuilder 會自動切換頁面。
+      // 只需要安全地關閉 Loading Dialog，不要去 pop 頁面的 context
+      if (dialogContext != null && Navigator.canPop(dialogContext!)) {
+        Navigator.pop(dialogContext!);
       }
     } catch (e) {
+      // ❌ 失敗時才關閉 Loading 視窗
+      if (dialogContext != null && Navigator.canPop(dialogContext!)) {
+        Navigator.pop(dialogContext!);
+      }
       if (mounted) {
-        Navigator.pop(context); // ❌ 失敗時才關閉 Loading 視窗讓使用者重新操作
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('登入失敗，請稍後再試：$e'),
@@ -93,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // 🎯 溫暖奶茶粉與極簡白皙的文青漸層背景
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFFFF5F5), Color(0xFFFFFDFB)],
@@ -106,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 28.0),
               child: Container(
-                // 🎯 珍珠白極簡懸浮卡片
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.85),
@@ -123,7 +130,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. 頂部自律對決標誌（改為溫暖的可可粉紅柔光）
                     Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
@@ -131,14 +137,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.star_rounded, // 象徵互相激勵的幸運星與獎牌
+                        Icons.star_rounded,
                         size: 64,
                         color: Color(0xFFFF8A8A),
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // 2. 歡迎文字（文青風深可可字體）
                     const Text(
                       '雙人每週代辦事項',
                       style: TextStyle(
@@ -149,8 +153,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    
-                    // 浪漫小對話框裝飾
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
@@ -177,8 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 48),
-
-                    // 3. 極簡高質感 Google 登入按鈕
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
@@ -205,10 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    
                     const SizedBox(height: 16),
-
-                    // 4. 極簡質感 訪客登入按鈕
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF8A7E7D),
@@ -224,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.spa_outlined, size: 18, color: Color(0xFF8A7E7D)), // 文青小草圖標
+                          Icon(Icons.spa_outlined, size: 18, color: Color(0xFF8A7E7D)),
                           SizedBox(width: 10),
                           Text(
                             '以訪客身分繼續',
