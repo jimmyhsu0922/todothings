@@ -124,6 +124,35 @@ class NotificationService {
     }
   }
 
+  // 💡 測試專用：獨立放在 NotificationService 類別頂層，方便外部調用
+  Future<void> showImmediateTestNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'test_reminder_channel',
+      '測試通知頻道',
+      channelDescription: '用來測試通知功能是否正常的頻道',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+
+    try {
+      await _notificationsPlugin.show(
+        888, // 測試用的 Notification ID
+        '🧪 測試通知來囉！',
+        '如果你看到這條訊息，代表 App 的通知功能與權限完全正常發揮中！✨',
+        notificationDetails,
+      );
+      print("✅ 測試通知已成功發送");
+    } catch (e) {
+      print("❌ 發送測試通知失敗: $e");
+    }
+  }
+
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.getLocation('Asia/Taipei'));
     tz.TZDateTime scheduledDate = tz.TZDateTime(
