@@ -75,10 +75,11 @@
   ]
 }
 
-```json
+```
 
 ## 靈修成長數據 (faith/timeline Document)
 以 records_jingyou 與 records_xinrou 陣列分別儲存兩人的每日靈修卡片：
+```
 {
   "records_jingyou": [
     {
@@ -93,6 +94,7 @@
   ],
   "records_xinrou": []
 }
+```
 
 🏗️ 專案結構與模組說明
 lib/
