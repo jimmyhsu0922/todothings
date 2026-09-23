@@ -53,10 +53,12 @@
 
 ---
 
-## 📂 資料庫架構 (Firestore Data Model)
+# 📂 資料庫架構（Firestore Data Model）
 
-### 1. 每週對決數據 (`weeks` Collection)
-以 `YYYY-M-W`（例如 `2026-7-1`）作為 Document ID 進行結構化儲存：
+## 1. 每週對決數據（`weeks` Collection）
+
+以 **`YYYY-M-W`**（例如 `2026-7-1`）作為 **Document ID** 進行結構化儲存：
+
 ```json
 {
   "bannerTitle": "2026 年 7 月 第 1 週",
@@ -65,8 +67,9 @@
     {
       "taskL": "心柔的任務",
       "detailL": "任務細節說明",
-      "statusL": 1,         // 0: pending(未完成), 1: completed(已完成), 2: failed(失敗)
-      "historyL": [1, 0, 1, 1, 0, 0, 0], // 週一至週日簽到陣列
+      "statusL": 1,
+      "historyL": [1, 0, 1, 1, 0, 0, 0],
+
       "taskR": "靖祐的任務",
       "detailR": "任務細節說明",
       "statusR": 0,
@@ -74,12 +77,33 @@
     }
   ]
 }
-
 ```
 
-## 靈修成長數據 (faith/timeline Document)
-以 records_jingyou 與 records_xinrou 陣列分別儲存兩人的每日靈修卡片：
-```
+### 📌 欄位說明
+
+* **`bannerTitle`**：顯示當週對決的標題
+* **`rewardText`**：當週達標後可獲得的獎勵
+* **`tasks`**：儲存當週所有對決任務
+* **`taskL` / `taskR`**：左右兩位使用者的任務名稱
+* **`detailL` / `detailR`**：任務的詳細說明
+* **`statusL` / `statusR`**：目前任務狀態
+
+  * `0`：**Pending（未完成）**
+  * `1`：**Completed（已完成）**
+  * `2`：**Failed（失敗）**
+* **`historyL` / `historyR`**：一週 7 天的每日簽到紀錄
+
+  * `0`：未完成
+  * `1`：已完成
+  * 陣列順序為 **週一至週日**
+
+---
+
+## 2. 靈修成長數據（`faith/timeline` Document）
+
+以 **`records_jingyou`** 與 **`records_xinrou`** 兩個陣列，分別儲存兩人的**每日靈修卡片**：
+
+```json
 {
   "records_jingyou": [
     {
@@ -96,21 +120,59 @@
 }
 ```
 
-🏗️ 專案結構與模組說明
+### 📌 欄位說明
+
+* **`records_jingyou`**：靖祐的每日靈修紀錄
+* **`records_xinrou`**：心柔的每日靈修紀錄
+* **`year`**：靈修紀錄年份
+* **`date`**：靈修日期
+* **`scripture`**：當日經文
+* **`notes`**：靈修筆記或心得
+* **`colorValue`**：靈修卡片使用的顏色
+* **`iconCodePoint`**：卡片圖示的 Unicode Code Point
+* **`selectedColorIndex`**：使用者選擇的顏色索引
+
+---
+
+# 🏗️ 專案結構與模組說明
+
+```text
 lib/
-├── models/             # 資料結構模型
-│   ├── duel_task.dart             # 每週挑戰任務與週資料模型
-│   ├── task_status.dart           # 任務狀態 Enum 與切換邏輯
-│   └── devotional_model.dart      # 靈修卡片 DevotionalItem 資料模型
-├── services/           # 核心服務邏輯
-│   ├── auth_service.dart          # Google & 訪客身份驗證服務
-│   └── notification_service.dart  # 本地推播、時區設定與定時提醒服務
-├── faith/              # 信仰成長專區模組
-│   ├── faith_growth_view.dart     # 靈修成長時間線主視圖 (雙人切換與自動定位)
-│   ├── faith_widgets.dart         # CustomPainter 道路繪製 & 經文卡片 & 對話框
-├── widgets/            # 可複用 UI 組件 (TaskCard, RewardCard, CustomDialog 等)
-├── history_view.dart   # 歷史月度歸檔視圖
-├── login_screen.dart   # 迎賓與登入畫面
-├── main_navigation.dart# 主導航頁面 (BottomNavigationBar)
-├── task_tracker_screen.dart # 7天每日圖形化簽到頁面
-└── weekly_duel_table.dart   # 雙人對決主視圖
+├── models/                         # 📦 資料結構模型
+│   ├── duel_task.dart              # 每週挑戰任務與週資料模型
+│   ├── task_status.dart             # 任務狀態 Enum 與切換邏輯
+│   └── devotional_model.dart        # 靈修卡片 DevotionalItem 資料模型
+│
+├── services/                       # ⚙️ 核心服務邏輯
+│   ├── auth_service.dart            # Google & 訪客身份驗證服務
+│   └── notification_service.dart   # 本地推播、時區設定與定時提醒服務
+│
+├── faith/                          # ✝️ 信仰成長專區模組
+│   ├── faith_growth_view.dart       # 靈修成長時間線主視圖
+│   │                                  # （雙人切換與自動定位）
+│   └── faith_widgets.dart           # CustomPainter 道路繪製、
+│                                      # 經文卡片與對話框
+│
+├── widgets/                        # 🧩 可複用 UI 組件
+│                                      # TaskCard、RewardCard、CustomDialog 等
+│
+├── history_view.dart               # 📜 歷史月度歸檔視圖
+├── login_screen.dart                # 🔐 迎賓與登入畫面
+├── main_navigation.dart             # 🧭 主導航頁面（BottomNavigationBar）
+├── task_tracker_screen.dart         # 📅 7 天每日圖形化簽到頁面
+└── weekly_duel_table.dart           # ⚔️ 雙人對決主視圖
+```
+
+## 🧩 模組功能概覽
+
+| 模組                             | 主要功能             |
+| ------------------------------ | ---------------- |
+| **`models/`**                  | 定義任務、狀態與靈修資料模型   |
+| **`services/`**                | 處理身份驗證、通知與背景服務   |
+| **`faith/`**                   | 負責靈修成長時間線與相關 UI  |
+| **`widgets/`**                 | 提供可重複使用的 UI 元件   |
+| **`history_view.dart`**        | 查看過去的週期與歷史紀錄     |
+| **`task_tracker_screen.dart`** | 每日任務簽到與進度追蹤      |
+| **`weekly_duel_table.dart`**   | 顯示雙人每週任務對決       |
+| **`main_navigation.dart`**     | 管理 App 主要頁面之間的切換 |
+
